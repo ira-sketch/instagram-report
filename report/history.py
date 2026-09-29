@@ -46,10 +46,11 @@ class History:
 
     def add_report(self, kind: str, data: dict, text: str):
         self.data["reports"].append({
-            "date": data["today"], "kind": kind,
+            "date": data["today"], "kind": kind, "period_start": data["period"]["start"],
             "account": data["account"], "spend_month": data["spend_month"],
             "ads": {a["id"]: {"name": a["name"], "spend": a["spend"], "follows": a["follows"],
-                              "profile_visits": a["profile_visits"], "reach": a["reach"]}
+                              "profile_visits": a["profile_visits"], "reach": a["reach"],
+                              "impressions": a["impressions"]}
                     for a in data["ads"]},
             "text": text,
         })

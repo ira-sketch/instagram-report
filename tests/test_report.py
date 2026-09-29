@@ -65,24 +65,31 @@ def cfg(monkeypatch):
 def test_full_report(cfg, tmp_path):
     data = collect(cfg, date(2026, 9, 29))
     json.dumps(data)  # сериализуется
+    h = History(tmp_path / "x.json"); h.add_report("scheduled", data, "t"); h.save()
     hist = History(tmp_path / "h.json")
-    baseline = {"ads": {"2": {"spend": 1500, "follows": 70}}}  # было 21 грн/подп, стало 90 за 10
-    plan = {"followers": 1463, "reach": 80000, "budget": 13500}
+    baseline = {"date": "2026-09-26", "period_start": "2026-09-01",
+                "account": {"followers": 1291, "views": 143823, "interactions": 2910},
+                "ads": {"1": {"spend": 1310, "follows": 77, "profile_visits": 545},
+                        "2": {"spend": 1500, "follows": 70}}}  # было 21 грн/подп, стало 90 за 10
+    plan = {}
     text = build_message(data, baseline, plan, cfg)
     print(text)
-    assert "Охваты: 69 427 · за 3 дн. 8 210 (−32%)" in text
-    assert "Подписчики: 1 333 (+587)" in text
-    assert "Взаимодействия: 3 320" in text
+    assert "Охваты: 69 427 · за 3 дн. 8 210 (было 12 070, −32%)" in text
+    assert "Подписчики: 1 333 · за 3 дн. +42 (было 1 291) · с начала месяца +587" in text
+    assert "Показы (просмотры): 162 223 · за 3 дн. +18 400" in text
+    assert "Взаимодействия: 3 320 · за 3 дн. +410" in text
+    assert "За 3 дн.: +310 грн · +18 подп. · +95 переходов" in text
+    assert "План/факт" not in text
     assert "«Ролик 1 (UGC)» · активна, 6 дн." in text
     assert "Переходы в профиль 640 · Подписчики 95" in text
     assert "Потрачено 1 620 грн (17 грн/подп.)" in text
     assert "«Ролик 2» · на обучении" in text
     assert "«Новый ролик» · активна, 1 дн. (рано оценивать)" in text
-    assert "Бюджет: потрачено 8 300 из 13 500 грн" in text
+    assert "Расход с начала месяца: 8 300 грн, прогноз на месяц 8 893" in text
     assert "⚠ Охваты за 3 дня упали на 32%" in text
     assert "⚠ «Ролик 2»: частота 3,3" in text
     assert "⚠ «Ролик 2»: стоимость подписчика выросла до 90 грн" in text
-    assert "⚠ Расход отстаёт от графика на 34% (8 300 из 12 600 грн к этой дате)." in text
+    assert "Расход отстаёт" not in text  # без плана не проверяется
     assert "Показов пока нет" in text
 
 

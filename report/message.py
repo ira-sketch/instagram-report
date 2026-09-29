@@ -106,20 +106,38 @@ def build_message(data: dict, baseline: dict | None, plan: dict, cfg: Config) ->
     if per["full_month"]:
         L[0] += f" · итоги за {MONTHS_NOM[end.month - 1]}"
 
-    # --- Аккаунт
+    # --- Аккаунт: текущие цифры и сколько прибавилось с прошлого отчёта
+    base = baseline or {}
+    b_acc = base.get("account") or {}
+    same_period = base.get("period_start") == per["start"]
+    days = (date.fromisoformat(data["today"]) - date.fromisoformat(base["date"])).days if base else None
+    since = f"за {days} дн." if days else ""
+
+    def delta(cur_v, base_v):
+        if cur_v is None or base_v is None or not since:
+            return ""
+        return f" · {since} {signed(cur_v - base_v)}"
+
     L += ["", "АККАУНТ"]
     reach_line = f"Охваты: {'≈' if acc.get('reach_approx') else ''}{n(acc['reach'])}"
     ch = change(acc.get("reach_3d"), acc.get("reach_prev3d"))
     if acc.get("reach_3d") is not None:
         reach_line += f" · за 3 дн. {n(acc['reach_3d'])}"
         if ch is not None:
-            reach_line += f" ({'+' if ch >= 0 else '−'}{abs(round(ch * 100))}%)"
+            reach_line += (f" (было {n(acc['reach_prev3d'])}, "
+                           f"{'+' if ch >= 0 else '−'}{abs(round(ch * 100))}%)")
     L.append(reach_line)
     growth, label = follower_growth(acc)
-    L.append(f"Подписчики: {n(acc['followers'])}"
-             + (f" ({signed(growth)}{label})" if growth is not None else ""))
-    L.append(f"Показы (просмотры): {n(acc['views'])}")
-    L.append(f"Взаимодействия: {n(acc['interactions'])}")
+    line = f"Подписчики: {n(acc['followers'])}"
+    if since and b_acc.get("followers") is not None:
+        line += f" · {since} {signed(acc['followers'] - b_acc['followers'])} (было {n(b_acc['followers'])})"
+    if growth is not None:
+        line += f" · с начала месяца {signed(growth)}{label}"
+    L.append(line)
+    L.append(f"Показы (просмотры): {n(acc['views'])}"
+             + (delta(acc["views"], b_acc.get("views")) if same_period else ""))
+    L.append(f"Взаимодействия: {n(acc['interactions'])}"
+             + (delta(acc["interactions"], b_acc.get("interactions")) if same_period else ""))
     pf = []
     if plan.get("followers"):
         pf.append(f"подписчики {n(acc['followers'])} / {n(plan['followers'])} "
@@ -153,6 +171,14 @@ def build_message(data: dict, baseline: dict | None, plan: dict, cfg: Config) ->
         if abs(ad["spend_month"] - ad["spend"]) >= 1:
             spend += f", в этом месяце {n(ad['spend_month'])}"
         L.append(spend)
+        b = (base.get("ads") or {}).get(ad["id"])
+        if since and b:
+            parts = [f"{signed(ad['spend'] - b['spend'])} {cur}"]
+            if ad["follows"] is not None and b.get("follows") is not None:
+                parts.append(f"{signed(ad['follows'] - b['follows'])} подп.")
+            if ad["profile_visits"] is not None and b.get("profile_visits") is not None:
+                parts.append(f"{signed(ad['profile_visits'] - b['profile_visits'])} переходов")
+            L.append(f"{since[0].upper() + since[1:]}: " + " · ".join(parts))
 
     # --- Бюджет
     budget = plan.get("budget")
@@ -166,11 +192,9 @@ def build_message(data: dict, baseline: dict | None, plan: dict, cfg: Config) ->
             line += f", прогноз {n(forecast)}"
         line += f", остаток {n(budget - spent)}"
     else:
-        line = f"Расход за период: {n(spent)} {cur}" + (
+        line = f"Расход с начала месяца: {n(spent)} {cur}" + (
             "" if per["full_month"] else f", прогноз на месяц {n(forecast)}")
     L.append(line)
-    if plan.get("error"):
-        L.append("(план из таблицы не загрузился)")
 
     # --- Прошлый месяц
     pv = data.get("prev")
