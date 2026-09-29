@@ -43,6 +43,10 @@
 ID Instagram и рекламного кабинета уже прописаны по умолчанию. При необходимости их можно
 переопределить на вкладке **Variables**: `IG_USER_ID`, `AD_ACCOUNT_ID`.
 
+Если группа разбита на темы и отчёты должны приходить в определённую тему, добавьте на вкладке
+**Variables** переменную `TG_THREAD_ID` с id темы. Его видно в `getUpdates` как `message_thread_id`
+после сообщения в этой теме. Без переменной отчёты идут в общую тему.
+
 ### 4. Команда /report (Cloudflare Worker)
 1. dash.cloudflare.com → **Workers & Pages → Create → Worker** → вставьте код из `worker/worker.js` → Deploy.
 2. В GitHub создайте fine-grained токен: **Settings → Developer settings → Fine-grained tokens** →

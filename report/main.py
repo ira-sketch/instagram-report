@@ -71,7 +71,7 @@ def main(argv=None) -> int:
                 print(json.dumps(data, ensure_ascii=False, indent=1))
                 return 0
 
-            send(cfg.tg_bot_token, cfg.tg_chat_id, text)
+            send(cfg.tg_bot_token, cfg.tg_chat_id, text, cfg.tg_thread_id)
             hist.add_report(args.mode, data, text)
             hist.log_run(args.mode, "ok", f"попытка {attempt}", data.get("action_types"))
             hist.save()
@@ -88,7 +88,7 @@ def main(argv=None) -> int:
             # Сообщаем в чат при первой ошибке и при окончательной неудаче
             if attempt == 1 or final:
                 try:
-                    send(cfg.tg_bot_token, cfg.tg_chat_id, error_text(e, final))
+                    send(cfg.tg_bot_token, cfg.tg_chat_id, error_text(e, final), cfg.tg_thread_id)
                 except TelegramError:
                     log.exception("Не удалось отправить сообщение об ошибке")
             if final:

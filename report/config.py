@@ -20,6 +20,7 @@ class Config:
     graph_version: str = field(default_factory=lambda: os.getenv("GRAPH_VERSION", "v23.0"))
     tg_bot_token: str = field(default_factory=lambda: os.getenv("TG_BOT_TOKEN", ""))
     tg_chat_id: str = field(default_factory=lambda: os.getenv("TG_CHAT_ID", ""))
+    tg_thread_id: str = field(default_factory=lambda: os.getenv("TG_THREAD_ID", ""))
     plan_csv_url: str = field(default_factory=lambda: os.getenv("PLAN_CSV_URL", ""))
 
     currency: str = field(default_factory=lambda: os.getenv("CURRENCY", "грн"))

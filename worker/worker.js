@@ -23,7 +23,7 @@ export default {
     const chatId = String(msg.chat.id);
 
     if (cmd === "/chatid") {
-      await reply(env, chatId, `chat_id этого чата: ${chatId}`);
+      await reply(env, chatId, `chat_id: ${chatId}` + (msg.message_thread_id ? `, id темы: ${msg.message_thread_id}` : ""), msg.message_thread_id);
     } else if (cmd === "/report") {
       if (!env.TG_CHAT_ID || chatId !== String(env.TG_CHAT_ID)) return new Response("ok");
       const r = await fetch(
@@ -41,16 +41,16 @@ export default {
       );
       await reply(env, chatId, r.ok
         ? "⏳ Готовлю отчёт, пришлю через 1–2 минуты."
-        : `❗ Не удалось запустить отчёт (GitHub ответил ${r.status}).`);
+        : `❗ Не удалось запустить отчёт (GitHub ответил ${r.status}).`, msg.message_thread_id);
     }
     return new Response("ok");
   },
 };
 
-async function reply(env, chatId, text) {
+async function reply(env, chatId, text, threadId) {
   await fetch(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text }),
+    body: JSON.stringify({ chat_id: chatId, text, ...(threadId ? { message_thread_id: threadId } : {}) }),
   });
 }

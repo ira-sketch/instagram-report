@@ -40,6 +40,7 @@ jobs:
           META_TOKEN: ${{ secrets.META_TOKEN }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_THREAD_ID: ${{ vars.TG_THREAD_ID }}   # необязательно: id темы в группе-форуме
           PLAN_CSV_URL: ${{ vars.PLAN_CSV_URL }}   # необязательно: таблица с планом
           IG_USER_ID: ${{ vars.IG_USER_ID || '17841478636477289' }}
           AD_ACCOUNT_ID: ${{ vars.AD_ACCOUNT_ID || '1508132533752052' }}
