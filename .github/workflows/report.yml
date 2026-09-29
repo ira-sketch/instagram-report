@@ -1,0 +1,57 @@
+name: Instagram report
+
+on:
+  schedule:
+    # GitHub работает по UTC. Запускаемся дважды (09:05 Киев летом и зимой),
+    # скрипт сам проверяет, наступило ли 09:00 по Киеву и прошло ли 3 дня.
+    - cron: "5 6 * * *"
+    - cron: "5 7 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "manual — отправить в чат сейчас; test — только показать отчёт в журнале"
+        type: choice
+        options: [manual, test, scheduled]
+        default: test
+
+permissions:
+  contents: write
+
+concurrency:
+  group: instagram-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75   # 4 попытки с паузой 15 минут
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Build and send report
+        env:
+          META_TOKEN: ${{ secrets.META_TOKEN }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          PLAN_CSV_URL: ${{ vars.PLAN_CSV_URL || 'https://docs.google.com/spreadsheets/d/1NlJsrWEDu1-1bGOTPvgxsSlHTHKfwB840QijnfWEU94/export?format=csv' }}
+          IG_USER_ID: ${{ vars.IG_USER_ID || '17841478636477289' }}
+          AD_ACCOUNT_ID: ${{ vars.AD_ACCOUNT_ID || '1508132533752052' }}
+          GRAPH_VERSION: ${{ vars.GRAPH_VERSION || 'v23.0' }}
+          PROFILE_VISIT_ACTIONS: ${{ vars.PROFILE_VISIT_ACTIONS }}
+          FOLLOW_ACTIONS: ${{ vars.FOLLOW_ACTIONS }}
+        run: python -m report.main --mode "${{ github.event_name == 'schedule' && 'scheduled' || inputs.mode }}"
+
+      - name: Save history and run log
+        if: always()
+        run: |
+          git config user.name "report-bot"
+          git config user.email "report-bot@users.noreply.github.com"
+          git add data/history.json
+          git diff --cached --quiet || (git commit -m "report: $(date -u +%F\ %H:%M) UTC" && git push)
