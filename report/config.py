@@ -23,6 +23,8 @@ class Config:
     tg_thread_id: str = field(default_factory=lambda: os.getenv("TG_THREAD_ID", ""))
     plan_csv_url: str = field(default_factory=lambda: os.getenv("PLAN_CSV_URL", ""))
 
+    report_name: str = field(default_factory=lambda: os.getenv("REPORT_NAME", ""))
+    history_file: str = field(default_factory=lambda: os.getenv("HISTORY_FILE", ""))
     currency: str = field(default_factory=lambda: os.getenv("CURRENCY", "грн"))
     # Курс пересчёта валюты кабинета в гривну (1 — кабинет уже в гривне)
     currency_rate: float = field(default_factory=lambda: float(os.getenv("CURRENCY_RATE", "1")))

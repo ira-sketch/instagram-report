@@ -1,4 +1,4 @@
-name: Instagram report
+name: Instagram report 2 (EUR)
 
 on:
   schedule:
@@ -37,16 +37,20 @@ jobs:
 
       - name: Build and send report
         env:
-          META_TOKEN: ${{ secrets.META_TOKEN }}
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-          TG_THREAD_ID: ${{ vars.TG_THREAD_ID }}   # необязательно: id темы в группе-форуме
-          PLAN_CSV_URL: ${{ vars.PLAN_CSV_URL }}   # необязательно: таблица с планом
-          IG_USER_ID: ${{ vars.IG_USER_ID || '17841478636477289' }}
-          AD_ACCOUNT_ID: ${{ vars.AD_ACCOUNT_ID || '1508132533752052' }}
+          # Второй кабинет. Если для него нужен свой токен/чат — создайте секреты с суффиксом _2,
+          # иначе берутся общие.
+          META_TOKEN: ${{ secrets.META_TOKEN_2 || secrets.META_TOKEN }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN_2 || secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID_2 || secrets.TG_CHAT_ID }}
+          TG_THREAD_ID: ${{ vars.TG_THREAD_ID_2 || vars.TG_THREAD_ID }}   # необязательно: id темы
+          HISTORY_FILE: data/history-2.json
+          CURRENCY: "€"
+          PLAN_CSV_URL: ${{ vars.PLAN_CSV_URL_2 }}   # необязательно: таблица с планом
+          IG_USER_ID: ${{ vars.IG_USER_ID_2 || '17841467401992986' }}
+          AD_ACCOUNT_ID: ${{ vars.AD_ACCOUNT_ID_2 || '401787622370587' }}
           GRAPH_VERSION: ${{ vars.GRAPH_VERSION || 'v23.0' }}
-          PROFILE_VISIT_ACTIONS: ${{ vars.PROFILE_VISIT_ACTIONS }}
-          FOLLOW_ACTIONS: ${{ vars.FOLLOW_ACTIONS }}
+          PROFILE_VISIT_ACTIONS: ${{ vars.PROFILE_VISIT_ACTIONS_2 || vars.PROFILE_VISIT_ACTIONS }}
+          FOLLOW_ACTIONS: ${{ vars.FOLLOW_ACTIONS_2 || vars.FOLLOW_ACTIONS }}
         run: python -m report.main --mode "${{ github.event_name == 'schedule' && 'scheduled' || inputs.mode }}"
 
       - name: Save history and run log

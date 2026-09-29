@@ -20,6 +20,11 @@ def n(x, dec: int = 0) -> str:
     return s
 
 
+def cost(x) -> str:
+    """Стоимость подписчика: мелкие суммы (евро) — с копейками/центами."""
+    return n(x, 2) if x is not None and abs(x) < 10 else n(x)
+
+
 def signed(x: float) -> str:
     return ("+" if x > 0 else "−" if x < 0 else "±") + n(abs(x))
 
@@ -78,8 +83,8 @@ def warnings(data: dict, baseline: dict | None, plan: dict, cfg: Config) -> list
         if d_follows >= cfg.min_follows_for_cpf:
             cpf_now = d_spend / d_follows
             if cpf_now > b_cpf * (1 + cfg.cpf_growth):
-                out.append(f"⚠ {name}: стоимость подписчика выросла до {n(cpf_now)} {cur} "
-                           f"(было {n(b_cpf)} {cur}).")
+                out.append(f"⚠ {name}: стоимость подписчика выросла до {cost(cpf_now)} {cur} "
+                           f"(было {cost(b_cpf)} {cur}).")
         elif d_follows <= 0 and d_spend >= 2 * b_cpf:
             out.append(f"⚠ {name}: с прошлого отчёта потрачено {n(d_spend)} {cur}, "
                        f"новых подписчиков нет.")
@@ -102,7 +107,8 @@ def build_message(data: dict, baseline: dict | None, plan: dict, cfg: Config) ->
     per = data["period"]
     cur = cfg.currency
     end = date.fromisoformat(per["end"])
-    L = [f"📊 Отчёт {dm(data['today'])} ({dm(per['start'])}–{dm(per['end'])})"]
+    name = cfg.report_name or (f"@{acc['username']}" if acc.get("username") else "")
+    L = [f"📊 {name + ' · ' if name else ''}Отчёт {dm(data['today'])} ({dm(per['start'])}–{dm(per['end'])})"]
     if per["full_month"]:
         L[0] += f" · итоги за {MONTHS_NOM[end.month - 1]}"
 
@@ -167,7 +173,7 @@ def build_message(data: dict, baseline: dict | None, plan: dict, cfg: Config) ->
         cpf = (ad["spend"] / ad["follows"]) if ad["follows"] else None
         spend = f"Потрачено {n(ad['spend'])} {cur}"
         if cpf:
-            spend += f" ({n(cpf)} {cur}/подп.)"
+            spend += f" ({cost(cpf)} {cur}/подп.)"
         if abs(ad["spend_month"] - ad["spend"]) >= 1:
             spend += f", в этом месяце {n(ad['spend_month'])}"
         L.append(spend)

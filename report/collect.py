@@ -63,8 +63,9 @@ def collect(cfg: Config, today: date) -> dict:
     totals = ig.period_totals(start, end)
     reach_3d, _ = ig.reach(yesterday - timedelta(days=2), yesterday)
     reach_prev3d, _ = ig.reach(yesterday - timedelta(days=5), yesterday - timedelta(days=3))
+    prof = ig.profile()
     account = {
-        "followers": ig.followers_count(),
+        "followers": prof["followers"], "username": prof["username"],
         "reach": reach, "reach_approx": reach_approx,
         "views": totals["views"], "interactions": totals["interactions"],
         "follows": totals["follows"], "unfollows": totals["unfollows"],

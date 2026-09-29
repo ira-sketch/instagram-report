@@ -11,6 +11,7 @@ import json
 import logging
 import sys
 import time
+from pathlib import Path
 from datetime import date, datetime
 
 from .collect import collect, periods
@@ -42,7 +43,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     cfg = Config()
-    hist = History()
+    hist = History(Path(cfg.history_file)) if cfg.history_file else History()
     now = datetime.now(KYIV)
     today = date.fromisoformat(args.today) if args.today else now.date()
 

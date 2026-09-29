@@ -14,8 +14,8 @@ from report.plan import parse_plan
 
 def fake_request(self, url, params):
     p = params or {}
-    if url.endswith("/17841478636477289") and p.get("fields") == "followers_count":
-        return {"followers_count": 1333}
+    if url.endswith("/17841478636477289") and p.get("fields") == "followers_count,username":
+        return {"followers_count": 1333, "username": "redko_test"}
     if url.endswith("17841478636477289/insights"):
         m = p["metric"]
         if m == "reach":
@@ -74,6 +74,7 @@ def test_full_report(cfg, tmp_path):
     plan = {}
     text = build_message(data, baseline, plan, cfg)
     print(text)
+    assert text.startswith("📊 @redko_test · Отчёт 29.09 (01.09–28.09)")
     assert "Охваты: 69 427 · за 3 дн. 8 210 (было 12 070, −32%)" in text
     assert "Подписчики: 1 333 · за 3 дн. +42 (было 1 291) · с начала месяца +587" in text
     assert "Показы (просмотры): 162 223 · за 3 дн. +18 400" in text

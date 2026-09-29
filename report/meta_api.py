@@ -97,8 +97,9 @@ class Instagram:
         self.meta = meta
         self.ig = ig_user_id
 
-    def followers_count(self) -> int:
-        return int(self.meta.get(self.ig, fields="followers_count")["followers_count"])
+    def profile(self) -> dict:
+        d = self.meta.get(self.ig, fields="followers_count,username")
+        return {"followers": int(d["followers_count"]), "username": d.get("username")}
 
     def _total_values(self, metrics: list[str], start: date, end: date, **extra) -> dict:
         """metric_type=total_value за [start, end]; при сбое пробует метрики по одной."""

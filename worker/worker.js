@@ -6,6 +6,7 @@
 //   TG_CHAT_ID         — chat_id рабочего чата (пока пусто — работает только /chatid)
 //   GH_TOKEN           — fine-grained токен GitHub с правом Actions: Read and write на репозиторий (секрет)
 //   GH_REPO            — владелец/репозиторий, например my-login/instagram-report
+//   WORKFLOWS          — необязательно: какие отчёты запускать (по умолчанию report.yml,report-2.yml)
 //
 // Команды:  /report — отчёт сейчас;  /chatid — показать id чата (для настройки).
 
@@ -26,8 +27,10 @@ export default {
       await reply(env, chatId, `chat_id: ${chatId}` + (msg.message_thread_id ? `, id темы: ${msg.message_thread_id}` : ""), msg.message_thread_id);
     } else if (cmd === "/report") {
       if (!env.TG_CHAT_ID || chatId !== String(env.TG_CHAT_ID)) return new Response("ok");
-      const r = await fetch(
-        `https://api.github.com/repos/${env.GH_REPO}/actions/workflows/report.yml/dispatches`,
+      // Какие отчёты запускать: по умолчанию оба кабинета
+      const workflows = (env.WORKFLOWS || "report.yml,report-2.yml").split(",").map((w) => w.trim());
+      const results = await Promise.all(workflows.map((wf) => fetch(
+        `https://api.github.com/repos/${env.GH_REPO}/actions/workflows/${wf}/dispatches`,
         {
           method: "POST",
           headers: {
@@ -38,7 +41,8 @@ export default {
           },
           body: JSON.stringify({ ref: "main", inputs: { mode: "manual" } }),
         },
-      );
+      )));
+      const r = { ok: results.every((x) => x.ok), status: results.map((x) => x.status).join("/") };
       await reply(env, chatId, r.ok
         ? "⏳ Готовлю отчёт, пришлю через 1–2 минуты."
         : `❗ Не удалось запустить отчёт (GitHub ответил ${r.status}).`, msg.message_thread_id);
