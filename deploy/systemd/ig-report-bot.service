@@ -1,0 +1,25 @@
+[Unit]
+Description=Instagram report Telegram commands (/report, /chatid)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=igreport
+Group=igreport
+WorkingDirectory=/opt/instagram-report
+ExecStart=/bin/sh -c 'exec /opt/instagram-report/.venv/bin/python -m report.bot /etc/instagram-report/*.env'
+Restart=always
+RestartSec=10
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+ReadWritePaths=/var/lib/instagram-report
+
+[Install]
+WantedBy=multi-user.target

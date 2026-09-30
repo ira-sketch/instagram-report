@@ -6,76 +6,87 @@
 
 ## Как это устроено
 
-| Часть | Где работает | Что делает |
-|---|---|---|
-| `report/` (Python) | GitHub Actions | Собирает цифры, считает план/факт и предупреждения, отправляет в Telegram |
-| `.github/workflows/report.yml` | GitHub Actions | Запускает бота каждый день в 06:05 и 07:05 UTC. Скрипт сам проверяет, что по Киеву уже 09:00 и что с прошлого планового отчёта прошло 3 дня |
-| `data/history.json` | репозиторий | История отчётов (для сравнения с прошлым отчётом) и журнал запусков |
-| `worker/worker.js` | Cloudflare Workers (бесплатно) | Принимает `/report` из чата и запускает отчёт |
+Всё работает на вашем сервере. Токены хранятся только там, в файлах, доступных одному служебному
+пользователю. Входящие порты не нужны: бот сам опрашивает Telegram.
 
-## Настройка (один раз)
-
-### 1. Telegram-бот
-1. В Telegram откройте @BotFather → `/newbot` → сохраните **токен бота**.
-2. Добавьте бота в рабочий чат.
-
-### 2. Токен Meta (бессрочный, от системного пользователя)
-1. developers.facebook.com → **Create App** → тип **Business** → привяжите к вашему Business Manager.
-2. business.facebook.com → **Настройки компании → Пользователи → Системные пользователи** → **Добавить**
-   (роль «Сотрудник» достаточно).
-3. **Назначить активы** этому пользователю (только просмотр / view):
-   - рекламный аккаунт `1508132533752052`;
-   - Instagram-аккаунт и связанная с ним Facebook-страница.
-4. **Создать токен** → выберите приложение из п. 1 → срок действия **«Никогда»** → права:
-   `instagram_basic`, `instagram_manage_insights`, `ads_read`, `business_management`,
-   `pages_show_list`, `pages_read_engagement`.
-5. Скопируйте токен. **Не отправляйте его в чаты**: он вставляется только в секреты GitHub (шаг 4).
-
-### 3. Секреты GitHub
-Репозиторий → **Settings → Secrets and variables → Actions → New repository secret**:
-
-| Имя | Значение |
+| Часть | Что делает |
 |---|---|
-| `META_TOKEN` | токен из шага 2 |
-| `TG_BOT_TOKEN` | токен из шага 1 |
-| `TG_CHAT_ID` | id рабочего чата (узнать командой `/chatid` после шага 4; для группы начинается с `-100…`) |
+| `report/` (Python) | Собирает цифры из Meta, считает сравнение и предупреждения, отправляет в Telegram |
+| `ig-report@report1.timer`, `ig-report@report2.timer` | Запускают отчёты в 09:05 по Киеву (и в 13:05 на случай, если утром сервер был выключен). Скрипт сам следит, чтобы между плановыми отчётами было 3 дня |
+| `ig-report-bot.service` | Слушает команды `/report` и `/chatid` в чате |
+| `/etc/instagram-report/report1.env`, `report2.env` | Токены и ID кабинетов (права 640, владелец root, группа igreport) |
+| `/var/lib/instagram-report/` | История отчётов для сравнения «за 3 дн.» и журнал запусков |
 
-ID Instagram и рекламного кабинета уже прописаны по умолчанию. При необходимости их можно
-переопределить на вкладке **Variables**: `IG_USER_ID`, `AD_ACCOUNT_ID`.
+| Отчёт | Instagram | Кабинет | Валюта | Бот |
+|---|---|---|---|---|
+| `report1` | `17841478636477289` | `1508132533752052` | грн | @VeryVery_instagram_report_bot |
+| `report2` | `17841467401992986` | `401787622370587` | € | @Buro_Report_bot |
 
-Если группа разбита на темы и отчёты должны приходить в определённую тему, добавьте на вкладке
-**Variables** переменную `TG_THREAD_ID` с id темы. Его видно в `getUpdates` как `message_thread_id`
-после сообщения в этой теме. Без переменной отчёты идут в общую тему.
+## Установка на сервер
 
-### 4. Команда /report (Cloudflare Worker)
-1. dash.cloudflare.com → **Workers & Pages → Create → Worker** → вставьте код из `worker/worker.js` → Deploy.
-2. В GitHub создайте fine-grained токен: **Settings → Developer settings → Fine-grained tokens** →
-   доступ только к этому репозиторию, право **Actions: Read and write**.
-3. В настройках воркера (**Settings → Variables and Secrets**) добавьте:
-   `TG_BOT_TOKEN`, `TG_WEBHOOK_SECRET` (любая длинная случайная строка), `GH_TOKEN`,
-   `GH_REPO` (например `login/instagram-report`). `TG_CHAT_ID` — после следующего пункта.
-4. Подключите вебхук: откройте в браузере
-   `https://api.telegram.org/bot<ТОКЕН_БОТА>/setWebhook?url=<АДРЕС_ВОРКЕРА>&secret_token=<TG_WEBHOOK_SECRET>`
-5. Напишите в рабочем чате `/chatid`. Полученный id добавьте в воркер (`TG_CHAT_ID`) и в секреты GitHub.
+Нужен сервер на Ubuntu 20.04+ или Debian 11+ и вход по SSH с правами sudo.
 
-## Первый запуск и проверка
-1. **Actions → Instagram report → Run workflow → mode: `test`.** Отчёт и сырые данные появятся в журнале
-   запуска, в чат ничего не уйдёт. Сверьте цифры с Ads Manager и Instagram Insights.
-2. В журнале есть строка «Типы действий в рекламе». Если переходы в профиль или подписчики по рекламе
-   показаны как «н/д», впишите нужные типы действий в переменные `PROFILE_VISIT_ACTIONS` /
-   `FOLLOW_ACTIONS` (через запятую).
-3. **Run workflow → mode: `manual`** — отчёт уйдёт в чат. Этот ручной запуск не сдвигает расписание.
-4. Дальше отчёты приходят сами: раз в 3 дня в 09:00 по Киеву, считая от первого планового отчёта.
+### 1. Доступ сервера к репозиторию (ключ только для чтения)
+```bash
+sudo ssh-keygen -t ed25519 -N "" -f /root/.ssh/instagram_report
+sudo cat /root/.ssh/instagram_report.pub
+```
+Скопируйте выведенную строку → GitHub → репозиторий → **Settings → Deploy keys → Add deploy key**.
+Title: `server`, галочку **Allow write access** не ставить → **Add key**.
 
-## Второй кабинет
+### 2. Скачать код и установить
+```bash
+sudo apt-get update && sudo apt-get install -y git
+sudo GIT_SSH_COMMAND="ssh -i /root/.ssh/instagram_report -o StrictHostKeyChecking=accept-new" \
+  git clone git@github.com:ira-sketch/instagram-report.git /opt/instagram-report
+sudo git -C /opt/instagram-report config core.sshCommand "ssh -i /root/.ssh/instagram_report"
+sudo bash /opt/instagram-report/deploy/install.sh
+```
 
-Второй отчёт (Instagram `17841467401992986`, кабинет `401787622370587`, валюта €) запускается
-отдельным workflow **Instagram report 2 (EUR)** по тому же расписанию и хранит свою историю
-в `data/history-2.json`. По умолчанию он использует те же секреты `META_TOKEN`, `TG_BOT_TOKEN`
-и `TG_CHAT_ID`. Если второму отчёту нужен свой токен Meta (кабинет в другом бизнес-портфолио)
-или другой чат, создайте секреты с суффиксом `_2`: `META_TOKEN_2`, `TG_CHAT_ID_2`,
-`TG_BOT_TOKEN_2`. Заголовок каждого отчёта начинается с имени Instagram-аккаунта.
-Команда `/report` запускает оба отчёта.
+### 3. Вписать токены
+```bash
+sudo nano /etc/instagram-report/report1.env
+sudo nano /etc/instagram-report/report2.env
+```
+В каждом файле заполните `META_TOKEN=` и `TG_BOT_TOKEN=` (после знака «=», без пробелов и кавычек).
+Сохранить в nano: **Ctrl+O**, Enter, выйти: **Ctrl+X**.
+
+### 4. Проверить и включить
+```bash
+sudo bash /opt/instagram-report/deploy/run.sh report1 test    # отчёт на экране, в чат не уходит
+sudo bash /opt/instagram-report/deploy/run.sh report2 test
+sudo bash /opt/instagram-report/deploy/run.sh report1 manual  # отправить в чат
+sudo systemctl restart ig-report-bot                          # включить /report
+systemctl list-timers 'ig-report*'                            # когда следующий плановый отчёт
+```
+
+### Полезные команды
+| Что | Команда |
+|---|---|
+| Журнал отчёта | `journalctl -u ig-report@report1 -n 100` |
+| Журнал бота /report | `journalctl -u ig-report-bot -n 100` |
+| Обновить код после изменений в GitHub | `sudo bash /opt/instagram-report/deploy/update.sh` |
+| Поменять токен | `sudo nano /etc/instagram-report/report1.env`, затем `sudo systemctl restart ig-report-bot` |
+
+### Безопасность
+- Отчёты работают от служебного пользователя `igreport` без права входа; systemd запрещает ему
+  писать куда-либо, кроме `/var/lib/instagram-report`.
+- Токены лежат только в `/etc/instagram-report/*.env`, их нет ни в GitHub, ни в журналах.
+- Ключ доступа к GitHub только читает репозиторий.
+- Входящие порты боту не нужны. На сервере можно оставить открытым только SSH:
+  `sudo ufw allow OpenSSH && sudo ufw enable`.
+- Если раньше вы заводили секреты в GitHub (Settings → Secrets → Actions), удалите их: они больше не нужны.
+- Токен Meta только читает статистику. Если он утёк, выпустите новый у системного пользователя
+  и отзовите старый.
+
+### Типы действий Meta
+Если переходы в профиль или подписчики по рекламе показаны как «н/д», посмотрите строку «Типы действий
+в рекламе» в выводе `run.sh … test` и впишите нужные в env-файл: `PROFILE_VISIT_ACTIONS=…`,
+`FOLLOW_ACTIONS=…` (через запятую).
+
+Инструкция по выпуску токена Meta — в отдельном документе.
+Папка `worker/` (Cloudflare) и workflows в `.github/` больше не нужны для работы: расписание
+и `/report` теперь на сервере.
 
 ## Как считаются цифры
 
@@ -109,9 +120,7 @@ ID Instagram и рекламного кабинета уже прописаны 
 - При ошибке бот сразу пишет в чат. Потом делает до 3 повторов с паузой 15 минут
   и сообщает в чат, если все попытки не удались.
 - Если токен истёк или отозван, повторов нет: бот сразу присылает инструкцию, что обновить.
-- Журнал каждого запуска хранится в `data/history.json` (раздел `runs`) и в журналах GitHub Actions.
-- GitHub отключает расписание в репозиториях без активности 60 дней. Бот коммитит историю после
-  каждого отчёта, но если расписание всё же отключится, включите его на вкладке Actions.
+- Журнал каждого запуска хранится в `/var/lib/instagram-report/history-*.json` (раздел `runs`) и в `journalctl`.
 
 ## Локальная проверка
 ```

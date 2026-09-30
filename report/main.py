@@ -29,7 +29,7 @@ log = logging.getLogger("report")
 def error_text(e: Exception, final: bool) -> str:
     if isinstance(e, MetaError) and e.token_problem:
         return ("❗ Отчёт не сформирован: токен Meta недействителен или истёк.\n"
-                "Нужно выпустить новый токен и обновить секрет META_TOKEN в GitHub.\n"
+                "Нужно выпустить новый токен и вписать его в META_TOKEN в /etc/instagram-report/*.env на сервере.\n"
                 f"Детали: {e}")
     tail = "Попытки исчерпаны." if final else "Повторю позже."
     return f"❗ Отчёт не сформирован: {e}\n{tail}"

@@ -1,0 +1,25 @@
+[Unit]
+Description=Instagram report (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=igreport
+Group=igreport
+WorkingDirectory=/opt/instagram-report
+EnvironmentFile=/etc/instagram-report/%i.env
+ExecStart=/opt/instagram-report/.venv/bin/python -m report.main --mode scheduled
+# до 4 попыток с паузой 15 минут
+TimeoutStartSec=90min
+
+# Защита: сервис видит только свой каталог данных, без root и без доступа к /home
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+ReadWritePaths=/var/lib/instagram-report

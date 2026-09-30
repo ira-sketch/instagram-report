@@ -128,3 +128,27 @@ def test_plan_real_sheet_header():
            "Сентябрь 2026,1463,80000,13500,заметка\nОктябрь 2026,,,,\n")
     assert parse_plan(csv, date(2026, 9, 5)) == {"followers": 1463, "reach": 80000, "budget": 13500}
     assert parse_plan(csv, date(2026, 10, 5)) == {}
+
+
+def test_bot_env_and_commands(tmp_path, monkeypatch):
+    from report import bot
+    f = tmp_path / "report1.env"
+    f.write_text("# коммент\nMETA_TOKEN=abc\nTG_BOT_TOKEN=t1\nTG_CHAT_ID=-100\n# TG_THREAD_ID=\nCURRENCY=€\n",
+                 encoding="utf-8")
+    env = bot.parse_env(str(f))
+    assert env == {"META_TOKEN": "abc", "TG_BOT_TOKEN": "t1", "TG_CHAT_ID": "-100", "CURRENCY": "€"}
+
+    b = bot.BotListener("t1", [("report1", env)])
+    b.username = "Buro_Report_bot"
+    started, replies = [], []
+    monkeypatch.setattr(b, "start_report", lambda n, e: started.append(n) or True)
+    monkeypatch.setattr(b, "reply", lambda m, t: replies.append(t))
+    msg = lambda text, chat=-100: {"text": text, "chat": {"id": chat}}
+    b.handle(msg("/report"))                          # всем ботам в чате
+    b.handle(msg("/report@VeryVery_instagram_report_bot"))  # другому боту — игнор
+    b.handle(msg("/report@buro_report_bot"))          # этому боту
+    b.handle(msg("/report", chat=-555))               # чужой чат — игнор
+    b.handle(msg("привет"))
+    b.handle({"text": "/chatid", "chat": {"id": -555}, "message_thread_id": 7})
+    assert started == ["report1", "report1"]
+    assert replies[-1] == "chat_id: -555, id темы: 7"

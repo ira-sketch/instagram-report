@@ -1,0 +1,11 @@
+[Unit]
+Description=Instagram report schedule (%i)
+
+[Timer]
+# Проверка в 09:05 и повторная в 13:05 по Киеву (если утром сервер был выключен).
+# Сам скрипт решает, прошло ли 3 дня с прошлого отчёта, и не шлёт дважды в день.
+OnCalendar=*-*-* 09,13:05:00 Europe/Kyiv
+Persistent=true
+
+[Install]
+WantedBy=timers.target
