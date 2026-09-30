@@ -5,7 +5,7 @@ APP=/opt/instagram-report
 CONF=/etc/instagram-report
 DATA=/var/lib/instagram-report
 
-[ "$(id -u)" = 0 ] || { echo "Запустите через sudo"; exit 1; }
+[ "$(id -u)" = 0 ] || { echo "Запустите от root (или через sudo)"; exit 1; }
 [ -f "$APP/report/main.py" ] || { echo "Код должен лежать в $APP (git clone ... $APP)"; exit 1; }
 
 echo "== Пакеты"
