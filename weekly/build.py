@@ -61,8 +61,14 @@ TYPE_UA = {"REELS": "Reel", "VIDEO": "Відео", "IMAGE": "Фото", "CAROUSE
            "FEED": "Допис", "STORY": "Сторіс"}
 
 
+PREFIXES = ("Допис в Instagram: ", "Публікація в Instagram: ", "Instagram post: ", "Публикация в Instagram: ")
+
+
 def short(text: str, limit: int = 30) -> str:
     text = " ".join((text or "").split())
+    for p in PREFIXES:  # службовий префікс назв кампаній з просування дописів
+        if text.startswith(p):
+            text = text[len(p):]
     return text if len(text) <= limit else text[:limit - 1].rstrip() + "…"
 
 
