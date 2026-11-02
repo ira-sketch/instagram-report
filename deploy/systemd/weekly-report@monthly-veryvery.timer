@@ -1,0 +1,10 @@
+[Unit]
+Description=Monthly Veryvery plan/fact report — 1st of month
+
+[Timer]
+# 1-го числа о 10:07 за Берліном, запасний запуск о 15:07
+OnCalendar=*-*-01 10,15:07:00 Europe/Berlin
+Persistent=true
+
+[Install]
+WantedBy=timers.target

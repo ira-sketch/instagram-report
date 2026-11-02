@@ -32,14 +32,26 @@ for r in report1 report2; do
   fi
 done
 
+for r in weekly-buro weekly-veryvery; do
+  if [ ! -f "$CONF/$r.env" ]; then
+    install -o root -g igreport -m 640 "$APP/deploy/$r.env.example" "$CONF/$r.env"
+    echo "   создан $CONF/$r.env — впишите токены"
+  else
+    echo "   $CONF/$r.env уже есть, не трогаю"
+  fi
+done
+
 echo "== Службы systemd"
 install -m 644 "$APP"/deploy/systemd/ig-report@.service "$APP"/deploy/systemd/ig-report@.timer \
-  "$APP"/deploy/systemd/ig-report-bot.service /etc/systemd/system/
+  "$APP"/deploy/systemd/ig-report-bot.service "$APP"/deploy/systemd/weekly-report@* /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now ig-report@report1.timer ig-report@report2.timer >/dev/null
 systemctl enable ig-report-bot.service >/dev/null
 
-if grep -q '^TG_BOT_TOKEN=.\+' "$CONF"/*.env; then
+# Тижневі/місячні звіти вмикаються окремо, коли токени вписано і старі завдання на комп'ютері вимкнено:
+#   systemctl enable --now weekly-report@weekly-buro.timer weekly-report@weekly-veryvery.timer weekly-report@monthly-veryvery.timer
+
+if grep -q '^TG_BOT_TOKEN=.\+' "$CONF"/report*.env; then
   systemctl restart ig-report-bot.service
   echo "   бот /report запущен"
 else

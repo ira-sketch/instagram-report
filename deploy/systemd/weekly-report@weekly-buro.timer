@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly Redko Buro report — Mondays
+
+[Timer]
+# 08:45 за Берліном (10:45 за Стамбулом), запасний запуск о 13:45 — двічі не надішле
+OnCalendar=Mon *-*-* 08,13:45:00 Europe/Berlin
+Persistent=true
+
+[Install]
+WantedBy=timers.target

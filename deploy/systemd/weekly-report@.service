@@ -1,0 +1,23 @@
+[Unit]
+Description=Weekly/monthly report with image (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=igreport
+Group=igreport
+WorkingDirectory=/opt/instagram-report
+# %i = weekly-buro | weekly-veryvery | monthly-veryvery
+ExecStart=/bin/sh -c 'kind=$$(echo %i | cut -d- -f1); brand=$$(echo %i | cut -d- -f2); set -a; . /etc/instagram-report/weekly-$$brand.env; set +a; exec /opt/instagram-report/.venv/bin/python -m weekly.main --kind $$kind --mode scheduled'
+TimeoutStartSec=60min
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+ReadWritePaths=/var/lib/instagram-report

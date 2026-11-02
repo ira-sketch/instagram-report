@@ -88,6 +88,40 @@ systemctl list-timers 'ig-report*'                            # когда сл�
 Папка `worker/` (Cloudflare) и workflows в `.github/` больше не нужны для работы: расписание
 и `/report` теперь на сервере.
 
+
+## Тижневі та місячний звіти «картинка + висновки»
+
+Раніше їх робили заплановані завдання Claude на комп'ютері (папка `test meta`, скрипт `send_report.ps1`).
+Тепер усе працює на сервері, комп'ютер не потрібен.
+
+| Звіт | Коли | Налаштування |
+|---|---|---|
+| Тижневий Redko Buro | пн 08:45 за Берліном (запасний запуск 13:45) | `/etc/instagram-report/weekly-buro.env` |
+| Тижневий Veryvery | пн 09:05 за Берліном (запасний 14:05) | `/etc/instagram-report/weekly-veryvery.env` |
+| Місячний Veryvery «план / факт» | 1-го числа о 10:07 за Берліном (запасний 15:07) | `/etc/instagram-report/weekly-veryvery.env` |
+
+Як працює (`weekly/`): цифри з Meta API → таблиця-картинка (той самий `render_report.py`, що був на
+комп'ютері) → висновки пише API Claude → у групу йде картинка, потім текст. План Veryvery читається з
+`Content Plan VeryVery.xlsx` на Google Drive (файл має бути відкритий для перегляду за посиланням).
+Якщо API Claude недоступний, звіт усе одно йде, з короткими автоматичними висновками.
+Запасний запуск нічого не дублює: звіт за один тиждень/місяць надсилається один раз.
+
+У env-файлах потрібно вписати: `META_TOKEN`, `TG_BOT_TOKEN`, `TG_CHAT_ID`, `ANTHROPIC_API_KEY`
+(ключ з console.anthropic.com → API keys).
+
+```bash
+sudo nano /etc/instagram-report/weekly-buro.env
+sudo nano /etc/instagram-report/weekly-veryvery.env
+sudo bash /opt/instagram-report/deploy/run-weekly.sh buro weekly test        # картинка і текст без відправки
+sudo bash /opt/instagram-report/deploy/run-weekly.sh veryvery weekly test
+sudo bash /opt/instagram-report/deploy/run-weekly.sh veryvery monthly test
+sudo systemctl enable --now weekly-report@weekly-buro.timer weekly-report@weekly-veryvery.timer weekly-report@monthly-veryvery.timer
+systemctl list-timers 'weekly-report*'
+```
+Результат тестового запуску: `/var/lib/instagram-report/out/<buro|veryvery>/`.
+Журнал: `journalctl -u weekly-report@weekly-buro -n 100`.
+Надіслати звіт зараз: `sudo bash /opt/instagram-report/deploy/run-weekly.sh buro weekly manual`.
+
 ## Как считаются цифры
 
 - **Сравнение с прошлым отчётом**: у подписчиков, показов, взаимодействий и у каждой рекламы

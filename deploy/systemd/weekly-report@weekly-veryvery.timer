@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly Veryvery report — Mondays
+
+[Timer]
+# 09:05 за Берліном (11:05 за Стамбулом), запасний запуск о 14:05
+OnCalendar=Mon *-*-* 09,14:05:00 Europe/Berlin
+Persistent=true
+
+[Install]
+WantedBy=timers.target
