@@ -58,8 +58,11 @@ class Collector:
 
     def ig_totals(self, start: date, end: date, metrics: list[str] = IG_METRICS) -> dict:
         """Сумарні показники акаунта за [start, end] (не довше 30 днів)."""
-        params = dict(period="day", metric_type="total_value", since=ts(start),
-                      until=ts(end + timedelta(days=1)))
+        since, until = ts(start), ts(end + timedelta(days=1))
+        # API приймає не більше 30 діб (2 592 000 с); через перехід на зимовий час 30 днів
+        # можуть бути на годину довшими — тоді зсуваємо початок
+        since = max(since, until - 2592000)
+        params = dict(period="day", metric_type="total_value", since=since, until=until)
         out: dict = {}
         for m in metrics:  # по одній: недоступна метрика не ламає решту
             try:
