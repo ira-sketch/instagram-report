@@ -107,7 +107,15 @@ def run_once(cfg: WConfig, kind: str, today: date, state: State, out_dir: Path) 
     render(spec, str(png))
     (out_dir / f"{fname}.json").write_text(json.dumps(spec, ensure_ascii=False, indent=1), encoding="utf-8")
 
-    for_ai = {"таблиця": spec, "сирі_дані": d, "додатково": extra}
+    # Для висновків — компактні дані: без довгих підписів, кандидати на просування — лише головне
+    raw = dict(d)
+    raw["posts"] = [{k: p.get(k) for k in ("date", "type", "reach", "views", "total_interactions", "shares", "saved")}
+                    | {"назва": names.get(p["id"]) or (p.get("caption") or "")[:60]} for p in d.get("posts", [])]
+    if "posts_30d" in d:
+        top = sorted(d["posts_30d"], key=lambda p: p.get("reach") or 0, reverse=True)[:8]
+        raw["posts_30d"] = [{"дата": p["date"], "тип": p.get("type"), "охоплення": p.get("reach"),
+                             "перегляди": p.get("views"), "підпис": (p.get("caption") or "")[:80]} for p in top]
+    for_ai = {"таблиця": spec, "сирі_дані": raw, "додатково": extra}
     try:
         if not cfg.anthropic_key:
             raise RuntimeError("немає ANTHROPIC_API_KEY")

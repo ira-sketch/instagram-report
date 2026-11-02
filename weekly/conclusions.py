@@ -53,13 +53,14 @@ def write(api_key: str, model: str, brand: str, kind: str, header: str, data: di
             + json.dumps(data, ensure_ascii=False, default=str))
     r = requests.post(API, timeout=120, headers={
         "x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-        json={"model": model, "max_tokens": 1500, "system": system,
+        json={"model": model, "max_tokens": 4000, "system": system,
               "messages": [{"role": "user", "content": user}]})
     if not r.ok:
         raise RuntimeError(f"API Claude: HTTP {r.status_code} {r.text[:300]}")
-    text = "".join(b.get("text", "") for b in r.json().get("content", []) if b.get("type") == "text")
+    body = r.json()
+    text = "".join(b.get("text", "") for b in body.get("content", []) if b.get("type") == "text")
     if not text.strip():
-        raise RuntimeError("API Claude повернув порожню відповідь")
+        raise RuntimeError(f"API Claude повернув порожню відповідь (stop_reason={body.get('stop_reason')})")
     return clean_html(text)
 
 
@@ -77,7 +78,7 @@ def short_names(api_key: str, model: str, posts: list[dict], campaigns: list[str
     try:
         r = requests.post(API, timeout=60, headers={
             "x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-            json={"model": model, "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]})
+            json={"model": model, "max_tokens": 2000, "messages": [{"role": "user", "content": prompt}]})
         r.raise_for_status()
         text = "".join(b.get("text", "") for b in r.json().get("content", []) if b.get("type") == "text")
         m = re.search(r"\{.*\}", text, re.S)

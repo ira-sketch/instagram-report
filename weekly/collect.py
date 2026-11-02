@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 IG_METRICS = ["reach", "views", "accounts_engaged", "total_interactions", "likes", "comments",
               "shares", "saves", "profile_views", "website_clicks"]
 FOLLOW_ACTIONS = ["onsite_conversion.ig_follow", "ig_follow", "instagram_profile_follow", "follow"]
-AD_FIELDS = "spend,impressions,reach,inline_link_clicks,actions"
+AD_FIELDS = "spend,impressions,reach,inline_link_clicks,actions,instagram_profile_follow"
 
 
 def ts(d: date) -> int:
@@ -125,7 +125,9 @@ class Collector:
     def _ads_row(self, r: dict) -> dict:
         acts = actions_dict(r)
         link = _num(r.get("inline_link_clicks")) or acts.get("link_click", 0.0)
-        follows = pick_action(acts, FOLLOW_ACTIONS)
+        # Підписки в Instagram з реклами — окреме поле insights (як «Follows» в Ads Manager)
+        follows = r.get("instagram_profile_follow")
+        follows = _num(follows) if follows not in (None, "") else pick_action(acts, FOLLOW_ACTIONS)
         spend, imp, reach = _num(r.get("spend")), _num(r.get("impressions")), _num(r.get("reach"))
         return {
             "spend": round(spend, 2), "impressions": int(imp), "reach": int(reach),
