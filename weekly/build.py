@@ -112,6 +112,16 @@ def posts_section(d: dict, names: dict, brand: str) -> dict:
     return sec
 
 
+LEAD_OBJECTIVES = {"OUTCOME_LEADS", "LEAD_GENERATION"}
+
+
+def has_leads(d: dict) -> bool:
+    """Чи показувати ліди: є ліди за будь-який з тижнів або кампанія з метою «Ліди»."""
+    rows = [d.get("ads_week") or {}, d.get("ads_prev_week") or {}] + list(d.get("campaigns") or [])
+    return any(r.get("leads") for r in rows) or \
+        any(c.get("objective") in LEAD_OBJECTIVES for c in d.get("campaigns") or [])
+
+
 def ads_compare(d: dict, brand: str, cur: str) -> dict:
     a, b = d.get("ads_prev_week"), d.get("ads_week")
     title = "Реклама Meta · порівняння з попереднім тижнем"
@@ -132,7 +142,9 @@ def ads_compare(d: dict, brand: str, cur: str) -> dict:
                 ("Кліки за посиланням", "link_clicks", n), ("Ціна кліку", "cpc", lambda v: money(v, cur, 3)),
                 ("CTR", "ctr", lambda v: f"{n(v, 2)}%" if v is not None else "—"),
                 ("CPM", "cpm", lambda v: money(v, cur))]
-        inverse, widths = ["Ціна кліку", "CPM"], [34, 22, 24, 20]
+        inverse, widths = ["Ціна кліку", "CPM", "Ціна ліда"], [34, 22, 24, 20]
+        if has_leads(d):  # ліди з форм — головний результат кампаній «Ліди»
+            spec[1:1] = [("Ліди", "leads", n), ("Ціна ліда", "cost_per_lead", lambda v: money(v, cur))]
     rows = [[label, fmt(a.get(k)) if a.get(k) is not None else "—",
              fmt(b.get(k)) if b.get(k) is not None else "—", pct_change(a.get(k), b.get(k))]
             for label, k, fmt in spec]
@@ -153,9 +165,21 @@ def campaigns_section(camps: list[dict], names: dict, brand: str, cur: str) -> d
     with_val = sorted([c for c in camps if c.get(key)], key=lambda c: c[key])
     without = [c for c in camps if not c.get(key)]
     digits = 3 if (brand == "buro") else 2
+    leads = brand == "buro" and has_leads({"campaigns": camps})
+    if leads:  # кампанії з лідами — першими, найдешевший лід угорі
+        with_val = sorted([c for c in camps if c.get("leads")], key=lambda c: c["cost_per_lead"]) + \
+            sorted([c for c in camps if not c.get("leads") and c.get(key)], key=lambda c: c[key])
+        without = [c for c in camps if not c.get("leads") and not c.get(key)]
     rows = [[short(names.get(c["name"]) or c["name"], 26), n(c["spend"], 2 if cur == "€" else 0), n(c[cnt]),
              n(c[key], digits) if c.get(key) else "—"] for c in with_val + without]
     sec = {"title": "Кампанії", "columns": cols, "widths": [40, 20, 16, 16], "rows": rows}
+    if leads:
+        sec["columns"] = [["Кампанія", "l"], [f"Витрати, {cur}", "r"], ["Кліки", "r"], [f"{cur}/клік", "r"],
+                          ["Ліди", "r"], [f"{cur}/лід", "r"]]
+        sec["widths"] = [33, 14, 10, 11, 9, 12]
+        for row, c in zip(rows, with_val + without):
+            row[0] = short(names.get(c["name"]) or c["name"], 22)
+            row += [n(c.get("leads") or 0), n(c["cost_per_lead"], 2) if c.get("cost_per_lead") else "—"]
     if with_val:
         sec["highlight"] = [0]
     return sec

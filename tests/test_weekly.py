@@ -145,6 +145,36 @@ def test_buro_weekly_no_ads(env, monkeypatch):
     assert spec["sections"][0]["rows"][0][3] == "+100"  # без історії — нетто за тиждень
 
 
+def test_buro_weekly_leads(env, monkeypatch):
+    """Ліди з форм (кампанія «Ліди») — у таблиці реклами, кампаній і в даних для висновків."""
+    lead_actions = [{"action_type": "link_click", "value": "41"}, {"action_type": "lead", "value": "3"},
+                    {"action_type": "onsite_conversion.lead_grouped", "value": "3"},
+                    {"action_type": "offsite_search_add_meta_leads", "value": "3"}]
+
+    def leads(self, url, params):
+        if url.endswith(f"{ACT}/insights"):
+            this = json.loads(params["time_range"])["since"] == "2026-11-09"
+            row = {"spend": "46.33" if this else "7.04", "impressions": "3753" if this else "194",
+                   "reach": "1845", "inline_link_clicks": "41" if this else "9",
+                   "actions": lead_actions if this else []}
+            if params["level"] == "account":
+                return {"data": [row]}
+            return {"data": [dict(row, campaign_id="1", campaign_name="Ліди дизайн пакування",
+                                  objective="OUTCOME_LEADS")] if this else []}
+        return fake_request(self, url, params)
+    monkeypatch.setattr(meta_api.Meta, "_request", leads)
+    monkeypatch.setenv("CURRENCY", "€")
+    assert wmain.main(["--kind", "weekly", "--mode", "test", "--today", "2026-11-16",
+                       "--out", str(env / "out")]) == 0
+    spec = json.loads((env / "out" / "report_2026-11-16.json").read_text())
+    ads = {r[0]: r for r in spec["sections"][-2]["rows"]}
+    assert ads["Ліди"][1:3] == ["0", "3"]           # ліди рахуються один раз, не сума варіантів
+    assert ads["Ціна ліда"][2] == "15,44 €"
+    camp = spec["sections"][-1]
+    assert [c[0] for c in camp["columns"]][-2:] == ["Ліди", "€/лід"]
+    assert camp["rows"][0][-2:] == ["3", "15,44"]
+
+
 def test_veryvery_monthly(env, monkeypatch):
     monkeypatch.setenv("BRAND", "veryvery")
     monkeypatch.setenv("BRAND_TITLE", "Veryvery")

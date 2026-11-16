@@ -14,6 +14,10 @@ log = logging.getLogger(__name__)
 IG_METRICS = ["reach", "views", "accounts_engaged", "total_interactions", "likes", "comments",
               "shares", "saves", "profile_views", "website_clicks"]
 FOLLOW_ACTIONS = ["onsite_conversion.ig_follow", "ig_follow", "instagram_profile_follow", "follow"]
+# Ліди: «lead» — загальна кількість (форми Meta + пікселя, як «Results» в Ads Manager);
+# решта — запасні варіанти, якщо «lead» немає. Беремо одне значення, не суму (інакше подвійний рахунок).
+LEAD_ACTIONS = ["lead", "onsite_conversion.lead_grouped", "leadgen_grouped",
+                "onsite_conversion.lead", "offsite_conversion.fb_pixel_lead"]
 AD_FIELDS = "spend,impressions,reach,inline_link_clicks,actions,instagram_profile_follow"
 
 
@@ -131,10 +135,12 @@ class Collector:
         # Підписки в Instagram з реклами — окреме поле insights (як «Follows» в Ads Manager)
         follows = r.get("instagram_profile_follow")
         follows = _num(follows) if follows not in (None, "") else pick_action(acts, FOLLOW_ACTIONS)
+        leads = pick_action(acts, LEAD_ACTIONS) or 0
         spend, imp, reach = _num(r.get("spend")), _num(r.get("impressions")), _num(r.get("reach"))
         return {
             "spend": round(spend, 2), "impressions": int(imp), "reach": int(reach),
             "link_clicks": int(link), "follows": int(follows) if follows is not None else 0,
+            "leads": int(leads), "cost_per_lead": round(spend / leads, 2) if leads else None,
             "cpc": round(spend / link, 4) if link else None,
             "ctr": round(link / imp * 100, 2) if imp else None,
             "cpm": round(spend / imp * 1000, 2) if imp else None,
